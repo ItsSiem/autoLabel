@@ -3,3 +3,6 @@ v0.1 2022-01-08
 v0.2 2022-01-15
 	- Started transition to regex based component detection
 	- Massive amounts of CPU support added
+v0.2.1 2022-01-26
+	- Increased support for GPU's and models using regular expressions
+	- GPU Detection overhaul using regex

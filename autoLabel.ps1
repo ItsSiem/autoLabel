@@ -1,4 +1,4 @@
-# Auto Label v0.2
+# Auto Label v0.2.1
 # Siem Gerritsen 2022
 
 $ascii = "
@@ -10,7 +10,7 @@ $ascii = "
 \__,_|\__,_|\__\___/\_____/\__,_|_.__/ \___|_|
 "
 ""
-"==== Auto Label v0.2 ==== "
+"==== Auto Label v0.2.1 ==== "
 "Siem Gerritsen 2022"
 Start-Sleep -Milliseconds 1000
 Write-Host $ascii
@@ -53,14 +53,19 @@ function Get-CPUs {
 }
 
 # ==== MODEL RELATED OPERATIONS ====
-$model = (Get-CimInstance -ClassName Win32_ComputerSystem).Model
+$modelRegexes = @(
+    "HP Z\w+( \d{2}\w? G\d)?",     # HP Systems (HP Z840, HP ZBook 15 G3, HP ZBook 14U G5)
+    "Precision \w* \w*"            # DELL Systems (Precision WorkStation T3500, Precision Tower 3620)
+)
 
-for ($i = 0; $i -lt (Get-CimInstance -ClassName Win32_ComputerSystem).Model.Split(" ").Count; $i++) {
-    if ((Get-CimInstance -ClassName Win32_ComputerSystem).Model.Split(" ")[$i] -eq "HP") {
-        $model = (Get-CimInstance -ClassName Win32_ComputerSystem).Model.Split(" ")[$i] + " " + (Get-CimInstance -ClassName Win32_ComputerSystem).Model.Split(" ")[$i + 1]
-    }
+$model = (Get-WmiObject Win32_ComputerSystem).Model
+
+for ($i = 0; $i -lt $modelRegexes.Count; $i++) {
+    if ($model -match $modelRegexes[$i]) {
+        $model = $Matches[0]  # Is the first index allways the correct one?
+        break
+    } 
 }
-
 
 # ==== MEMORY RELATED OPERATIONS ====
 $ramSize = [string]((Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property capacity -Sum).sum / 1gb).tostring().Split(".")[0] + "GB"
@@ -93,28 +98,18 @@ $cpuAmount = if((Get-CPUs) -eq 2) {"2x"} else {""}
 # ==== GPU RELATED OPERATIONS ====
 $gpus = Get-WmiObject Win32_VideoController
 $gpuNames = ""
+$gpuRegexes = @(
+    "\w{2,3} Graphics \w+",      # Intel intergrated graphics (HD Graphics 405)
+    "Quadro (RTX )*\w+"          # Quadro's (Quadro RTX 4000, Quadro K2200, Quadro M2000M)
+)
 
-# OLD CODE
-if ($null -ne $gpus.Count) {
-    for ($i = 0; $i -lt $gpus.Count; $i++) {
-        $gpuNameArray = $gpus[$i].Name.Split(" ")
-        for ($j - 0; $j -lt $gpuNameArray.Count; $j++) {
-            if ($gpuNameArray[$j] -eq "Quadro" -or $gpuNameArray[$j] -eq "Intel") {
-                $gpuName = $gpuNameArray[$j] + " " + $gpuNameArray[$j + 1] + " " + $gpuNameArray[$j + 2]
-            }
-        }
-        $gpuNames += $gpuName + "/"
-    }
-} 
-else {
-    $gpuNameArray = $gpus.Name.Split(" ")
-    for ($j = 0; $j -lt $gpuNameArray.Count; $j++) {
-        if ($gpuNameArray[$j] -eq "Quadro" -or $gpuNameArray[$j] -eq "Intel") {
-            $gpuName = $gpuNameArray[$j] + " " + $gpuNameArray[$j + 1] + " " + $gpuNameArray[$j + 2]
+# NEW CODE
+for ($i = 0; $i -lt $gpuRegexes.Count; $i++) {
+    if (($gpus.Name -join "\") -match $gpuRegexes[$i]) {
+        foreach ($match in $matches) {
+            $gpuNames += $match[0] + "/"
         }
     }
-        
-    $gpuNames = $gpuName
 }
 
 if ($gpuNames -eq "" -or $null -eq $gpuNames) {
