@@ -1,0 +1,5 @@
+v0.1 2022-01-08
+	- Initial release
+v0.2 2022-01-15
+	- Started transition to regex based component detection
+	- Massive amounts of CPU support added
