@@ -56,47 +56,6 @@ function Get-CPUs {
     return [int]$sockets
 }
 
-function Get-Disk($disk) {
-    [string]$size = [math]::Round(($disk.size / 1000000000))
-    $unit = "GB"
-    if ($size.length -gt 3) {
-        $size = $size.ToString().substring(0, ($size.Length - 3))
-        $unit = "TB"
-    }
-    if ($disk.MediaType -eq "SSD") {
-        if ($disk.busType -eq "SATA" -or $disk.busType -eq "RAID") {
-            $type = "SSD"
-        }
-        elseif ($disk.busType -eq "NVMe") {
-            $type = "NVMe"
-        }
-    }
-    elseif ($disk.MediaType -eq "HDD") {
-        $type = "HDD"
-    }
-    else {
-        return
-    }
-    if ($disk.DeviceID -eq $osDiskID) {
-        $suffix += " + W10P"
-        if ($language -ne "NL") {
-            $suffix += " $language"
-        }
-    }
-    AddToDiskTable("$size$unit $type$suffix")
-}
-
-function AddToDiskTable($disk, $table = $diskTable) {
-    foreach ($type in $table.Keys) {
-        if ($disk -eq $type) {
-            $table.$type++
-            return
-        }
-    }
-    $table.Add($disk, 1)
-    return
-}
-
 # ==== MODEL RELATED OPERATIONS ====
 $modelRegexes = @(
     "HP Z\w+( \d{2}\w? G\d)?", # HP Systems (HP Z840, HP ZBook 15 G3, HP ZBook 14U G5)
@@ -113,7 +72,7 @@ for ($i = 0; $i -lt $modelRegexes.Count; $i++) {
 }
 
 # ==== MEMORY RELATED OPERATIONS ====
-$ramSize = [string]((Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property capacity -Sum).sum / 1gb).tostring().Split(".")[0] + "GB"
+$ramSize = [string]((Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property capacity -Sum).sum / 1gb).tostring().Split(",")[0] + "GB"
 $mem = Get-WmiObject Win32_PhysicalMemory
 
 if ($mem.SMBIOSMemoryType -eq 26) {
@@ -170,6 +129,47 @@ if ($gpuNames -eq "" -or $null -eq $gpuNames) {
 $osDiskID = (Get-WmiObject Win32_DiskPartition | Where-Object { $_.BootPartition -eq "true" }).deviceID.Substring(6, 1)
 $language = (Get-WmiObject win32_operatingsystem).MUILanguages.Substring(3, 2)
 $diskTable = @{}
+
+function Get-Disk($disk) {
+    [string]$size = [math]::Round(($disk.size / 1000000000))
+    $unit = "GB"
+    if ($size.length -gt 3) {
+        $size = $size.ToString().substring(0, ($size.Length - 3))
+        $unit = "TB"
+    }
+    if ($disk.MediaType -eq "SSD") {
+        if ($disk.busType -eq "SATA" -or $disk.busType -eq "RAID") {
+            $type = "SSD"
+        }
+        elseif ($disk.busType -eq "NVMe") {
+            $type = "NVMe"
+        }
+    }
+    elseif ($disk.MediaType -eq "HDD") {
+        $type = "HDD"
+    }
+    else {
+        return
+    }
+    if ($disk.DeviceID -eq $osDiskID) {
+        $suffix += " + W10P"
+        if ($language -ne "NL") {
+            $suffix += " $language"
+        }
+    }
+    AddToDiskTable("$size$unit $type$suffix")
+}
+
+function AddToDiskTable($disk, $table = $diskTable) {
+    foreach ($type in $table.Keys) {
+        if ($disk -eq $type) {
+            $table.$type++
+            return
+        }
+    }
+    $table.Add($disk, 1)
+    return
+}
 
 foreach ($disk in (Get-PhysicalDisk)) {
     Get-Disk( $disk )
