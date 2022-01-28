@@ -20,13 +20,15 @@ Start-Sleep -Milliseconds 2000
 ""
 "Het systeem wordt nu gescant..."
 
-function throwError($msg = "Een of meerdere componenten in dit systeem worden nog niet ondersteund") {
+function throwError($fatal = $false, $msg = "Een of meerdere componenten in dit systeem worden nog niet ondersteund") {
     $msg
-
+    if ($fatal) {
         Write-Host "Press any key to exit..."
         $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
         exit
-
+    }
+    Write-Host "Press any key to continue..."
+    $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 }
 
 function wrapText( $text, $width = 23 ) {
@@ -157,18 +159,18 @@ for ($i = 0; $i -lt $gpuRegexes.Count; $i++) {
 
 # Check of een zbook wel intel graphics aan heeft staan
 if ($model -match "HP Z\w+( \d{2}\w? G\d)" -and $gpuNames -match $gpuRegexes[1] -and $gpuRegexes -notmatch $gpuRegexes[0]) {
-    throwError("ZBook met een enkele GPU gedetecteerd, staan de graphics in de bios op 'Hybrid'?")
+    throwError($false, "ZBook met een enkele GPU gedetecteerd, staan de graphics in de bios op 'Hybrid'?")
 }
 
 if ($gpuNames -eq "" -or $null -eq $gpuNames) {
-    throwError("Er is geen GPU gevonden, zijn de drivers wel geinstalleerd?")
+    throwError($true, "Er is geen GPU gevonden, zijn de drivers wel geinstalleerd?")
 }
 
 # ==== DISK RELATED OPERATIONS ====
 $osDiskID = (Get-WmiObject Win32_DiskPartition | Where-Object { $_.BootPartition -eq "true" }).deviceID.Substring(6, 1)
 $language = (Get-WmiObject win32_operatingsystem).MUILanguages.Substring(3, 2)
 $diskTable = @{}
-AddToDiskTable("2TB HDD")
+
 foreach ($disk in (Get-PhysicalDisk)) {
     Get-Disk( $disk )
 }
