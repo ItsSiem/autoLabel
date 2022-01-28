@@ -6,3 +6,7 @@ v0.2 2022-01-15
 v0.2.1 2022-01-26
 	- Increased support for GPU's and models using regular expressions
 	- GPU Detection overhaul using regex
+v0.2.69 2022-01-28
+	- Changed version number to the funny number
+	- Revamped disk detection
+	- Added disk amount multipliers (2x512GB)

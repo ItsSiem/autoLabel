@@ -1,4 +1,4 @@
-# Auto Label v0.2.1
+# Auto Label v0.2.69
 # Siem Gerritsen 2022
 
 $ascii = "
@@ -10,7 +10,7 @@ $ascii = "
 \__,_|\__,_|\__\___/\_____/\__,_|_.__/ \___|_|
 "
 ""
-"==== Auto Label v0.2.1 ==== "
+"==== Auto Label v0.2.69 ==== "
 "Siem Gerritsen 2022"
 Start-Sleep -Milliseconds 1000
 Write-Host $ascii
@@ -22,9 +22,11 @@ Start-Sleep -Milliseconds 2000
 
 function throwError($msg = "Een of meerdere componenten in dit systeem worden nog niet ondersteund") {
     $msg
-    Write-Host "Press any key to exit..."
-    $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-    exit
+
+        Write-Host "Press any key to exit..."
+        $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+        exit
+
 }
 
 function wrapText( $text, $width = 23 ) {
@@ -52,9 +54,50 @@ function Get-CPUs {
     return [int]$sockets
 }
 
+function Get-Disk($disk) {
+    [string]$size = [math]::Round(($disk.size / 1000000000))
+    $unit = "GB"
+    if ($size.length -gt 3) {
+        $size = $size.ToString().substring(0, ($size.Length - 3))
+        $unit = "TB"
+    }
+    if ($disk.MediaType -eq "SSD") {
+        if ($disk.busType -eq "SATA" -or $disk.busType -eq "RAID") {
+            $type = "SSD"
+        }
+        elseif ($disk.busType -eq "NVMe") {
+            $type = "NVMe"
+        }
+    }
+    elseif ($disk.MediaType -eq "HDD") {
+        $type = "HDD"
+    }
+    else {
+        return
+    }
+    if ($disk.DeviceID -eq $osDiskID) {
+        $suffix += " + W10P"
+        if ($language -ne "NL") {
+            $suffix += " $language"
+        }
+    }
+    AddToDiskTable("$size$unit $type$suffix")
+}
+
+function AddToDiskTable($disk, $table = $diskTable) {
+    foreach ($type in $table.Keys) {
+        if ($disk -eq $type) {
+            $table.$type++
+            return
+        }
+    }
+    $table.Add($disk, 1)
+    return
+}
+
 # ==== MODEL RELATED OPERATIONS ====
 $modelRegexes = @(
-    "HP Z\w+( \d{2}\w? G\d)?",     # HP Systems (HP Z840, HP ZBook 15 G3, HP ZBook 14U G5)
+    "HP Z\w+( \d{2}\w? G\d)?", # HP Systems (HP Z840, HP ZBook 15 G3, HP ZBook 14U G5)
     "Precision \w* \w*"            # DELL Systems (Precision WorkStation T3500, Precision Tower 3620)
 )
 
@@ -93,17 +136,17 @@ for ($i = 0; $i -lt $cpuRegexes.Count; $i++) {
     } 
 }
 
-$cpuAmount = if((Get-CPUs) -eq 2) {"2x"} else {""}
+$cpuAmount = if ((Get-CPUs) -eq 2) { "2x" } else { "" }
 
 # ==== GPU RELATED OPERATIONS ====
 $gpus = Get-WmiObject Win32_VideoController
 $gpuNames = ""
 $gpuRegexes = @(
-    "\w{2,3} Graphics \w+",      # Intel intergrated graphics (HD Graphics 405)
-    "Quadro (RTX )*\w+"          # Quadro's (Quadro RTX 4000, Quadro K2200, Quadro M2000M)
+    "\w{2,3} Graphics \w+", # Intel intergrated graphics (HD Graphics 405, Pro Graphics 600)
+    "Quadro (RTX )*\w+",          # Quadro's (Quadro RTX 4000, Quadro K2200, Quadro M2000M)
+    "GeForce \wTX \d{3,}( \w+)*"    # Nvidia GeForce GTX / RTX 3060 Ti
 )
 
-# NEW CODE
 for ($i = 0; $i -lt $gpuRegexes.Count; $i++) {
     if (($gpus.Name -join "\") -match $gpuRegexes[$i]) {
         foreach ($match in $matches) {
@@ -112,75 +155,34 @@ for ($i = 0; $i -lt $gpuRegexes.Count; $i++) {
     }
 }
 
+# Check of een zbook wel intel graphics aan heeft staan
+if ($model -match "HP Z\w+( \d{2}\w? G\d)" -and $gpuNames -match $gpuRegexes[1] -and $gpuRegexes -notmatch $gpuRegexes[0]) {
+    throwError("ZBook met een enkele GPU gedetecteerd, staan de graphics in de bios op 'Hybrid'?")
+}
+
 if ($gpuNames -eq "" -or $null -eq $gpuNames) {
     throwError("Er is geen GPU gevonden, zijn de drivers wel geinstalleerd?")
 }
 
 # ==== DISK RELATED OPERATIONS ====
-$OS = Get-WmiObject -Class win32_operatingsystem
-$osPartition = Get-WmiObject Win32_DiskPartition | Where-Object { $_.BootPartition -eq "true" }
-$osDiskID = $osPartition.deviceID.Substring(6, 1)
-$language = $OS.MUILanguages.Substring(3, 2)
-
-$disks = Get-PhysicalDisk
-$diskLines = @()
-
-foreach ($disk in $disks) {
-    $diskLine = ""
-    $capacitySuffix = ""
-    $win = ""
-    $mediaType = $disk.MediaType
-    $busType = $disk.BusType
-    [string]$rawSize = [math]::Round($disk.Size / 1000000000, 2)
-
-    if ($disk.Size.tostring().Length -eq 12) {
-        $capacitySuffix = "GB"
-    }
-    elseif ($disk.Size.tostring().Length -eq 13) {
-        $capacitySuffix = "TB"
-    }
-
-    if ($capacitySuffix -eq "GB") {
-        $size = $rawSize.Substring(0, 3) + $capacitySuffix
-    }
-    elseif ($capacitySuffix -eq "TB") {
-        if ($disk.Size.tostring().Length -eq 14) {
-            $size = $rawSize.Substring(0, 2) + $capacitySuffix
-        }
-        else {
-            $size = $rawSize.Substring(0, 1) + $capacitySuffix
-        }
-    }
-
-    if ($mediaType -eq "SSD") {
-        if ($busType -eq "SATA" -or $busType -eq "RAID") {
-            $type = "SSD"
-        }
-        elseif ($busType -eq "NVMe") {
-            $type = "NVMe"
-        }
-    }
-    elseif ($mediaType -eq "HDD") {
-        $type = "HDD"
-    }
-    else {
-        Continue
-    }
-
-    if ($disk.DeviceID -eq $osDiskID) {
-        $win = " + W10P"
-        if ($language -ne "NL") {
-            $win = " + W10P $language"
-        }
-    }
-    $diskLine = $size + " " + $type + $win + "/"
-    $diskLines += $diskLine
+$osDiskID = (Get-WmiObject Win32_DiskPartition | Where-Object { $_.BootPartition -eq "true" }).deviceID.Substring(6, 1)
+$language = (Get-WmiObject win32_operatingsystem).MUILanguages.Substring(3, 2)
+$diskTable = @{}
+AddToDiskTable("2TB HDD")
+foreach ($disk in (Get-PhysicalDisk)) {
+    Get-Disk( $disk )
 }
 
-$trimmedDiskLines = -join $diskLines
+foreach ($entry in $diskTable.keys) {
+    $multiplier = ""
+    if ($($diskTable.$entry) -gt 1) {
+       $multiplier = $($diskTable.$entry).ToString()+"x" 
+    }
+    $diskLines += $multiplier+$entry+"/"
+}
 
 # ==== OUTPUT TEXT OPERATIONS ====
-[string]$outputText = "$Model/$cpuAmount$cpuName/$ramSize $memType/$trimmedDiskLines$gpuNames"
+[string]$outputText = "$Model/$cpuAmount$cpuName/$ramSize $memType/$diskLines$gpuNames"
 [string]$wrappedText = wrapText($outputText)
 "===================="
 $wrappedText
