@@ -20,9 +20,9 @@ Start-Sleep -Milliseconds 2000
 ""
 "Het systeem wordt nu gescant..."
 
-function throwError($fatal = $false, $msg = "Een of meerdere componenten in dit systeem worden nog niet ondersteund") {
+function throwError($fatal = "false", $msg = "Een of meerdere componenten in dit systeem worden nog niet ondersteund") {
     $msg
-    if ($fatal) {
+    if ($fatal -eq "true") {
         Write-Host "Press any key to exit..."
         $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
         exit
@@ -54,6 +54,47 @@ function Get-CPUs {
         select-object -unique).count;
 
     return [int]$sockets
+}
+
+# function Get-Disk($disk) {
+#     [string]$size = [math]::Round(($disk.size / 1000000000))
+#     $unit = "GB"
+#     if ($size.length -gt 3) {
+#         $size = $size.ToString().substring(0, ($size.Length - 3))
+#         $unit = "TB"
+#     }
+#     if ($disk.MediaType -eq "SSD") {
+#         if ($disk.busType -eq "SATA" -or $disk.busType -eq "RAID") {
+#             $type = "SSD"
+#         }
+#         elseif ($disk.busType -eq "NVMe") {
+#             $type = "NVMe"
+#         }
+#     }
+#     elseif ($disk.MediaType -eq "HDD") {
+#         $type = "HDD"
+#     }
+#     else {
+#         return
+#     }
+#     if ($disk.DeviceID -eq $osDiskID) {
+#         $suffix += " + W10P"
+#         if ($language -ne "NL") {
+#             $suffix += " $language"
+#         }
+#     }
+#     AddToDiskTable("$size$unit $type$suffix")
+# }
+
+function AddToDiskTable($disk, $table = $diskTable) {
+    foreach ($type in $table.Keys) {
+        if ($disk -eq $type) {
+            $table.$type++
+            return
+        }
+    }
+    $table.Add($disk, 1)
+    return
 }
 
 # ==== MODEL RELATED OPERATIONS ====
@@ -118,19 +159,20 @@ for ($i = 0; $i -lt $gpuRegexes.Count; $i++) {
 
 # Check of een zbook wel intel graphics aan heeft staan
 if ($model -match "HP Z\w+( \d{2}\w? G\d)" -and $gpuNames -match $gpuRegexes[1] -and $gpuRegexes -notmatch $gpuRegexes[0]) {
-    throwError($false, "ZBook met een enkele GPU gedetecteerd, staan de graphics in de bios op 'Hybrid'?")
+    throwError("false", "ZBook met een enkele GPU gedetecteerd, staan de graphics in de bios op 'Hybrid'?")
 }
 
 if ($gpuNames -eq "" -or $null -eq $gpuNames) {
-    throwError($true, "Er is geen GPU gevonden, zijn de drivers wel geinstalleerd?")
+    throwError("true", "Er is geen GPU gevonden, zijn de drivers wel geinstalleerd?")
 }
 
 # ==== DISK RELATED OPERATIONS ====
 $osDiskID = (Get-WmiObject Win32_DiskPartition | Where-Object { $_.BootPartition -eq "true" }).deviceID.Substring(6, 1)
 $language = (Get-WmiObject win32_operatingsystem).MUILanguages.Substring(3, 2)
 $diskTable = @{}
+$disks = Get-PhysicalDisk
 
-function Get-Disk($disk) {
+foreach ($disk in $disks) {
     [string]$size = [math]::Round(($disk.size / 1000000000))
     $unit = "GB"
     if ($size.length -gt 3) {
@@ -149,7 +191,7 @@ function Get-Disk($disk) {
         $type = "HDD"
     }
     else {
-        return
+        continue
     }
     if ($disk.DeviceID -eq $osDiskID) {
         $suffix += " + W10P"
@@ -157,24 +199,17 @@ function Get-Disk($disk) {
             $suffix += " $language"
         }
     }
-    AddToDiskTable("$size$unit $type$suffix")
-}
-
-function AddToDiskTable($disk, $table = $diskTable) {
-    foreach ($type in $table.Keys) {
-        if ($disk -eq $type) {
-            $table.$type++
-            return
+    $instance = "$size$unit $type$suffix"
+    
+    foreach ($type in $diskTable.Keys) {
+        if ($instance -eq $type) {
+            $diskTable.$type++
+            continue
         }
     }
-    $table.Add($disk, 1)
-    return
+    $diskTable.Add($instance, 1)
+    continue
 }
-
-foreach ($disk in (Get-PhysicalDisk)) {
-    Get-Disk( $disk )
-}
-
 foreach ($entry in $diskTable.keys) {
     $multiplier = ""
     if ($($diskTable.$entry) -gt 1) {
