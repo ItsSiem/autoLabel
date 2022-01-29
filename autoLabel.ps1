@@ -20,15 +20,18 @@ Start-Sleep -Milliseconds 2000
 ""
 "Het systeem wordt nu gescant..."
 
-function throwError($fatal = "false", $msg = "Een of meerdere componenten in dit systeem worden nog niet ondersteund") {
+function throwError($msg){
     $msg
-    if ($fatal -eq "true") {
-        Write-Host "Press any key to exit..."
-        $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-        exit
-    }
+    Write-Host "Press any key to exit..."
+    $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    exit
+}
+
+function throwWarning($msg) {
+    $msg
     Write-Host "Press any key to continue..."
     $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    return
 }
 
 function wrapText( $text, $width = 23 ) {
@@ -159,11 +162,11 @@ for ($i = 0; $i -lt $gpuRegexes.Count; $i++) {
 
 # Check of een zbook wel intel graphics aan heeft staan
 if ($model -match "HP Z\w+( \d{2}\w? G\d)" -and $gpuNames -match $gpuRegexes[1] -and $gpuRegexes -notmatch $gpuRegexes[0]) {
-    throwError("false", "ZBook met een enkele GPU gedetecteerd, staan de graphics in de bios op 'Hybrid'?")
+    throwWarning("ZBook met een enkele GPU gedetecteerd, staan de graphics in de bios op 'Hybrid'?")
 }
 
 if ($gpuNames -eq "" -or $null -eq $gpuNames) {
-    throwError("true", "Er is geen GPU gevonden, zijn de drivers wel geinstalleerd?")
+    throwError("Er is geen GPU gevonden, zijn de drivers wel geinstalleerd?")
 }
 
 # ==== DISK RELATED OPERATIONS ====
