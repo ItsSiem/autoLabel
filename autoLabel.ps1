@@ -59,47 +59,6 @@ function Get-CPUs {
     return [int]$sockets
 }
 
-# function Get-Disk($disk) {
-#     [string]$size = [math]::Round(($disk.size / 1000000000))
-#     $unit = "GB"
-#     if ($size.length -gt 3) {
-#         $size = $size.ToString().substring(0, ($size.Length - 3))
-#         $unit = "TB"
-#     }
-#     if ($disk.MediaType -eq "SSD") {
-#         if ($disk.busType -eq "SATA" -or $disk.busType -eq "RAID") {
-#             $type = "SSD"
-#         }
-#         elseif ($disk.busType -eq "NVMe") {
-#             $type = "NVMe"
-#         }
-#     }
-#     elseif ($disk.MediaType -eq "HDD") {
-#         $type = "HDD"
-#     }
-#     else {
-#         return
-#     }
-#     if ($disk.DeviceID -eq $osDiskID) {
-#         $suffix += " + W10P"
-#         if ($language -ne "NL") {
-#             $suffix += " $language"
-#         }
-#     }
-#     AddToDiskTable("$size$unit $type$suffix")
-# }
-
-function AddToDiskTable($disk, $table = $diskTable) {
-    foreach ($type in $table.Keys) {
-        if ($disk -eq $type) {
-            $table.$type++
-            return
-        }
-    }
-    $table.Add($disk, 1)
-    return
-}
-
 # ==== MODEL RELATED OPERATIONS ====
 $modelRegexes = @(
     "HP Z\w+( \d{2}\w? G\d)?", # HP Systems (HP Z840, HP ZBook 15 G3, HP ZBook 14U G5)
@@ -161,7 +120,7 @@ for ($i = 0; $i -lt $gpuRegexes.Count; $i++) {
 }
 
 # Check of een zbook wel intel graphics aan heeft staan
-if ($model -match "HP Z\w+( \d{2}\w? G\d)" -and $gpuNames -match $gpuRegexes[1] -and $gpuRegexes -notmatch $gpuRegexes[0]) {
+if ($model -match "HP Z\w+( \d{2}\w? G\d)" -and $gpuNames -match $gpuRegexes[1] -and $gpuNames -notmatch $gpuRegexes[0]) {
     throwWarning("ZBook met een enkele GPU gedetecteerd, staan de graphics in de bios op 'Hybrid'?")
 }
 
@@ -170,7 +129,7 @@ if ($gpuNames -eq "" -or $null -eq $gpuNames) {
 }
 
 # ==== DISK RELATED OPERATIONS ====
-$osDiskID = (Get-WmiObject Win32_DiskPartition | Where-Object { $_.BootPartition -eq "true" }).deviceID.Substring(6, 1)
+$osDiskID = (Get-WmiObject Win32_DiskPartition | Where-Object { $_.BootPartition -eq "true" } | Select-Object -first 1).deviceID.Substring(6, 1)
 $language = (Get-WmiObject win32_operatingsystem).MUILanguages.Substring(3, 2)
 $diskTable = @{}
 $disks = Get-PhysicalDisk
