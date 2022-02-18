@@ -155,6 +155,7 @@ foreach ($disk in $disks) {
     else {
         continue
     }
+    $suffix = ""
     if ($disk.DeviceID -eq $osDiskID) {
         $suffix += " + W10P"
         if ($language -ne "NL") {
