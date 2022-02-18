@@ -1,4 +1,4 @@
-# Auto Label v0.2.69
+# Auto Label v0.2.70
 # Siem Gerritsen 2022
 
 $ascii = "
@@ -10,7 +10,7 @@ $ascii = "
 \__,_|\__,_|\__\___/\_____/\__,_|_.__/ \___|_|
 "
 ""
-"==== Auto Label v0.2.69 ==== "
+"==== Auto Label v0.2.70 ==== "
 "Siem Gerritsen 2022"
 Start-Sleep -Milliseconds 1000
 Write-Host $ascii
