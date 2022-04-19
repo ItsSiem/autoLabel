@@ -1,4 +1,4 @@
-# Auto Label v0.2.70
+# Auto Label v0.2.80
 # Siem Gerritsen 2022
 
 $ascii = "
@@ -10,7 +10,7 @@ $ascii = "
 \__,_|\__,_|\__\___/\_____/\__,_|_.__/ \___|_|
 "
 ""
-"==== Auto Label v0.2.70 ==== "
+"==== Auto Label v0.2.80 ==== "
 "Siem Gerritsen 2022"
 Start-Sleep -Milliseconds 1000
 Write-Host $ascii
@@ -20,17 +20,17 @@ Start-Sleep -Milliseconds 2000
 ""
 "Het systeem wordt nu gescant..."
 
+Function Pause($M="Press any key to continue . . . "){If($psISE){$S=New-Object -ComObject "WScript.Shell";$B=$S.Popup("Click OK to continue.",0,"Script Paused",0);Return};Write-Host -NoNewline $M;$I=16,17,18,20,91,92,93,144,145,166,167,168,169,170,171,172,173,174,175,176,177,178,179,180,181,182,183;While($K.VirtualKeyCode -Eq $Null -Or $I -Contains $K.VirtualKeyCode){$K=$Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")};Write-Host}
+
 function throwError($msg){
     $msg
-    Write-Host "Press any key to exit..."
-    $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    Pause
     exit
 }
 
 function throwWarning($msg) {
     $msg
-    Write-Host "Press any key to continue..."
-    $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    Pause
     return
 }
 
@@ -157,7 +157,12 @@ foreach ($disk in $disks) {
     }
     $suffix = ""
     if ($disk.DeviceID -eq $osDiskID) {
-        $suffix += " + W10P"
+        if ((Get-WmiObject win32_operatingsystem).caption -like "*Windows 10 Pro*") {
+            $suffix += " + W10P"
+        }
+        elseif ((Get-WmiObject win32_operatingsystem).caption -like "*Windows 11 Pro*") {
+            $suffix += " + W11P"
+        }
         if ($language -ne "NL") {
             $suffix += " $language"
         }
@@ -189,8 +194,7 @@ $wrappedText
 "===================="
 
 Write-Host "Controleer de bovenstaande systeem specificaties"
-Write-Host "Druk op een knop om door te gaan..."
-$Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+Pause
 
 # ==== PRINTING RELATED OPERATIONS ====
 Add-Type -AssemblyName System.Drawing
@@ -218,5 +222,4 @@ $PrintDocument.add_PrintPage({
 $PrintDocument.Print()
 (New-Object -ComObject WScript.Network).RemovePrinterConnection("\\HP-Z400\labelPrinter")
 
-Write-Host "Druk op een knop om te sluiten"
-$Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+Pause
