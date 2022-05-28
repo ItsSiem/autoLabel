@@ -10,3 +10,8 @@ v0.2.69 2022-01-28
 	- Changed version number to the funny number
 	- Revamped disk detection
 	- Added disk amount multipliers (2x512GB)
+v0.2.70 2022-??-??
+	- i have forgotten what i added, i think it was bugfixes
+v0.2.80 2022-04-19
+	- Added Windows 11 support i think
+	- Implemented a better pause function

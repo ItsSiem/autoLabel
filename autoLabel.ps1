@@ -202,7 +202,7 @@ Add-Type -AssemblyName System.Drawing
 (New-Object -ComObject WScript.Network).AddWindowsPrinterConnection("\\HP-Z400\labelPrinter")
 
 $PrintDocument = New-Object System.Drawing.Printing.PrintDocument
-$PrintDocument.PrinterSettings.PrinterName = '\\HP-Z400\DYMO LabelWriter 400 Turbo (Kopie 1)'
+$PrintDocument.PrinterSettings.PrinterName = '\\HP-Z400\DYMO LabelWriter 400 Turbo'
 # $PrintDocument.PrinterSettings.PrinterName = 'Microsoft Print To PDF'
 # $PrintDocument.PrinterSettings.PrinterName = 'Brother MFC-L2710DW series Printer'
 $PrintDocument.DocumentName = "autoLabel automatic printjob"
